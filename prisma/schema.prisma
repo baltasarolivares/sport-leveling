@@ -114,7 +114,7 @@ model Activity {
 model Dungeon {
   id          String          @id @default(cuid())
   creatorId   String
-  creator     User            @relation("CreatedDungeons", fields: [creatorId], references: [id])
+  creator     User            @relation("CreatedDungeons", fields: [creatorId], references: [id], onDelete: Cascade)
 
   title       String
   description String?
