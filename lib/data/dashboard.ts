@@ -11,14 +11,15 @@ export interface DashboardData {
     name: string;
     level: number;
     xpTotal: number;
-    xpCurrentLevel: number;   // XP acumulada desde el inicio del nivel actual
-    xpNeededThisLevel: number; // XP total que cuesta este nivel
-    xpPercent: number;         // 0–100
+    xpCurrentLevel: number;
+    xpNeededThisLevel: number;
+    xpPercent: number;
     rank: string;
     hunterClass: string;
     strength: number;
     agility: number;
     intelligence: number;
+    gold: number;
   };
   weeklyXP: number;
   totalActivities: number;
@@ -29,6 +30,7 @@ export interface DashboardData {
     durationMinutes: number;
     intensity: number;
     xpGranted: number;
+    goldGranted: number;
     strengthGain: number;
     agilityGain: number;
     intelligenceGain: number;
@@ -96,6 +98,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData | 
       strength:         user.strength,
       agility:          user.agility,
       intelligence:     user.intelligence,
+      gold:             user.gold,
     },
     weeklyXP:         weeklyAgg._sum.xpGranted ?? 0,
     totalActivities,
@@ -106,6 +109,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData | 
       durationMinutes: a.durationMinutes,
       intensity:       a.intensity,
       xpGranted:       a.xpGranted,
+      goldGranted:     a.goldGranted,
       strengthGain:    a.strengthGain,
       agilityGain:     a.agilityGain,
       intelligenceGain: a.intelligenceGain,

@@ -82,12 +82,18 @@ export default async function DashboardPage() {
             </p>
           </div>
 
-          {/* XP total */}
-          <div className="text-right shrink-0">
-            <p className="text-[10px] text-zinc-600 uppercase tracking-wider">XP Total</p>
-            <p className="text-xl font-black text-zinc-100">
-              {hunter.xpTotal.toLocaleString()}
-            </p>
+          {/* XP total + Oro */}
+          <div className="text-right shrink-0 space-y-1">
+            <div>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider">XP Total</p>
+              <p className="text-xl font-black text-zinc-100">
+                {hunter.xpTotal.toLocaleString()}
+              </p>
+            </div>
+            <Link href="/shop" className="inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors">
+              <span>🪙</span>
+              <span>{hunter.gold.toLocaleString()} G</span>
+            </Link>
           </div>
         </div>
 

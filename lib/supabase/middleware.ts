@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Rutas que requieren sesión activa
-const PROTECTED = ["/dashboard", "/log", "/profile", "/rankings", "/dungeons", "/onboarding"];
+const PROTECTED = ["/dashboard", "/log", "/profile", "/rankings", "/dungeons", "/onboarding", "/shop"];
 
 // Rutas de auth — redirigir al dashboard si ya hay sesión
 const AUTH_ROUTES = ["/login", "/register"];
