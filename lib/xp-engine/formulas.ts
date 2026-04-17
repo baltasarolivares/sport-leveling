@@ -13,6 +13,15 @@ const XP_PER_MINUTE_MIN = 2;
 // Puntos de estadística por cada 60 min × intensidad
 const STAT_POINTS_PER_HOUR_INTENSITY = 1;
 
+// Multiplicadores de XP por categoría
+// INTELLIGENCE reducido: trabajo/estudio da menos XP para equilibrar el ranking
+const CATEGORY_XP_MULTIPLIER: Record<string, number> = {
+  STRENGTH:     1.00,
+  AGILITY:      1.00,
+  INTELLIGENCE: 0.60,  // -40%: equilibra que "trabajar todo el día" no domine el ranking
+  MIXED:        0.85,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TIPOS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -109,7 +118,9 @@ export function calculateActivityXP(
   const clampedDuration = Math.max(1, durationMinutes);
   const clampedIntensity = Math.max(1, Math.min(10, intensity));
 
-  const xpGranted = Math.round(clampedDuration * intensityRate(clampedIntensity));
+  const baseXP    = Math.round(clampedDuration * intensityRate(clampedIntensity));
+  const multiplier = CATEGORY_XP_MULTIPLIER[category] ?? 1.0;
+  const xpGranted = Math.round(baseXP * multiplier);
 
   // Puntos de stat: 1 punto por cada 60 min × (intensidad / 5)
   const rawPoints = (clampedDuration / 60) * clampedIntensity * STAT_POINTS_PER_HOUR_INTENSITY;
