@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAuthUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
 import { logout } from "@/lib/auth/actions";
@@ -32,12 +33,22 @@ function relativeDate(date: Date): string {
 export default async function ProfilePage() {
   const { profile } = await requireAuthUser();
 
-  // Actividades recientes
-  const recentActivities = await prisma.activity.findMany({
-    where:   { userId: profile.id },
-    orderBy: { createdAt: "desc" },
-    take:    10,
-  });
+  // Actividades recientes + inventario + oro
+  const [recentActivities, ownedItems, hunter] = await Promise.all([
+    prisma.activity.findMany({
+      where:   { userId: profile.id },
+      orderBy: { createdAt: "desc" },
+      take:    10,
+    }),
+    prisma.item.findMany({
+      where:   { ownerId: profile.id },
+      orderBy: [{ equipped: "desc" }, { rank: "asc" }],
+    }),
+    prisma.user.findUniqueOrThrow({
+      where:  { id: profile.id },
+      select: { gold: true },
+    }),
+  ]);
 
   const rank  = RANK_CONFIG[profile.rank as Rank];
   const cls   = CLASS_CONFIG[profile.hunterClass as HunterClass];
@@ -151,6 +162,97 @@ export default async function ProfilePage() {
             );
           })}
         </div>
+      </section>
+
+      {/* ── INVENTARIO & TIENDA ──────────────────────────────── */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            Inventario
+          </h2>
+          <span className="text-xs text-zinc-600">{ownedItems.length}/4 slots</span>
+        </div>
+
+        {/* Items equipados y en inventario */}
+        {ownedItems.length > 0 ? (
+          <div className="space-y-2 mb-3">
+            {ownedItems.map((item) => {
+              const RANK_COLOR: Record<string, string> = {
+                E: "text-zinc-400  border-zinc-700",
+                D: "text-green-400  border-green-600/40",
+                C: "text-blue-400   border-blue-600/40",
+                B: "text-purple-400 border-purple-600/40",
+                A: "text-yellow-400 border-yellow-500/40",
+                S: "text-red-400    border-red-500/50",
+              };
+              const TYPE_ICON: Record<string, string> = {
+                WEAPON: "⚔️", ARMOR: "🛡️", ACCESSORY: "💍",
+              };
+              const color = RANK_COLOR[item.rank] ?? RANK_COLOR.E;
+              return (
+                <div key={item.id}
+                  className={`flex items-center gap-3 rounded-xl border bg-zinc-900/60 px-4 py-3 ${
+                    item.equipped ? "border-violet-500/30 bg-violet-500/5" : "border-zinc-800"
+                  }`}>
+                  <span className="text-lg shrink-0">{TYPE_ICON[item.itemType]}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-zinc-200 truncate">{item.name}</p>
+                    <p className="text-xs text-zinc-600 truncate">
+                      {[
+                        item.xpMultiplierAll  > 0 && `+${Math.round(item.xpMultiplierAll * 100)}% XP`,
+                        item.xpMultiplierStr  > 0 && `+${Math.round(item.xpMultiplierStr * 100)}% STR XP`,
+                        item.xpMultiplierAgi  > 0 && `+${Math.round(item.xpMultiplierAgi * 100)}% AGI XP`,
+                        item.xpMultiplierInt  > 0 && `+${Math.round(item.xpMultiplierInt * 100)}% INT XP`,
+                        item.strengthBonus    > 0 && `+${item.strengthBonus} STR`,
+                        item.agilityBonus     > 0 && `+${item.agilityBonus} AGI`,
+                        item.intelligenceBonus > 0 && `+${item.intelligenceBonus} INT`,
+                      ].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.equipped && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-violet-500/40 text-violet-400 bg-violet-500/10">
+                        Equipado
+                      </span>
+                    )}
+                    <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${color}`}>
+                      {item.rank}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-4 py-5 text-center mb-3">
+            <p className="text-2xl mb-1">🛒</p>
+            <p className="text-xs text-zinc-500">Sin items. Visita la tienda para equiparte.</p>
+          </div>
+        )}
+
+        {/* Acceso a tienda con balance de oro */}
+        <Link
+          href="/shop"
+          className="flex items-center justify-between w-full px-4 py-3 rounded-xl
+            border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10
+            transition-colors group"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-base">🛒</span>
+            <span className="text-sm font-semibold text-amber-400 group-hover:text-amber-300 transition-colors">
+              Ir a la Tienda de Armas
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-black text-amber-400">
+              🪙 {hunter.gold.toLocaleString()} G
+            </span>
+            <svg className="w-4 h-4 text-amber-600 group-hover:text-amber-400 transition-colors"
+              fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </Link>
       </section>
 
       {/* ── ACTIVIDADES RECIENTES ────────────────────────────── */}
