@@ -15,12 +15,12 @@ function HomeIcon({ active }: { active: boolean }) {
   );
 }
 
-function TrophyIcon({ active }: { active: boolean }) {
+function ShopIcon({ active }: { active: boolean }) {
   return (
-    <svg className={`w-5 h-5 ${active ? "text-violet-400" : "text-zinc-500"}`}
+    <svg className={`w-5 h-5 ${active ? "text-amber-400" : "text-zinc-500"}`}
       fill="none" viewBox="0 0 24 24" strokeWidth={active ? 2.5 : 1.8} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round"
-        d="M16 7a4 4 0 01-4 4m0 0a4 4 0 01-4-4m4 4v6m-6 4h12M7 7H4a1 1 0 000 2h1.5M17 7h3a1 1 0 010 2h-1.5M7 7V4m10 3V4" />
+        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 7h11L15 13M9 21a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2z" />
     </svg>
   );
 }
@@ -48,11 +48,11 @@ function ProfileIcon({ active }: { active: boolean }) {
 // ── Definición de tabs ───────────────────────────────────────────────────────
 
 const TABS = [
-  { href: "/dashboard", label: "Inicio",    Icon: HomeIcon    },
-  { href: "/rankings",  label: "Rankings",  Icon: TrophyIcon  },
-  { href: "/log",       label: "Registrar", Icon: null        }, // botón central especial
-  { href: "/dungeons",  label: "Dungeons",  Icon: DungeonIcon },
-  { href: "/profile",   label: "Perfil",    Icon: ProfileIcon },
+  { href: "/dashboard", label: "Inicio",   Icon: HomeIcon    },
+  { href: "/shop",      label: "Tienda",   Icon: ShopIcon    },
+  { href: "/log",       label: "Registrar", Icon: null       }, // botón central especial
+  { href: "/dungeons",  label: "Dungeons", Icon: DungeonIcon },
+  { href: "/profile",   label: "Perfil",   Icon: ProfileIcon },
 ];
 
 export default function BottomNav() {
@@ -85,7 +85,9 @@ export default function BottomNav() {
               className="flex flex-col items-center gap-0.5 min-w-[48px] py-1">
               {Icon && <Icon active={active} />}
               <span className={`text-[9px] font-medium transition-colors ${
-                active ? "text-violet-400" : "text-zinc-600"
+                active
+                  ? href === "/shop" ? "text-amber-400" : "text-violet-400"
+                  : "text-zinc-600"
               }`}>
                 {label}
               </span>

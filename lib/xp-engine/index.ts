@@ -41,6 +41,9 @@ export interface ApplyActivityResult {
   acceleratorsTriggered: Accelerator[];
   bonusXP: number; // XP extra por aceleradores
 
+  // Economía
+  goldGranted: number;
+
   // Estado nuevo del cazador
   newXpTotal: number;
   newLevel: number;
@@ -64,18 +67,35 @@ export interface ApplyActivityResult {
 export async function applyActivity(
   input: ActivityInput
 ): Promise<ApplyActivityResult> {
-  // 1. Cargar el cazador actual
+  // 1. Cargar el cazador actual + items equipados
   const hunter = await prisma.user.findUniqueOrThrow({
     where: { id: input.userId },
-    include: { activities: { select: { id: true } } },
+    include: {
+      activities:  { select: { id: true } },
+      ownedItems:  { where: { equipped: true } },
+    },
   });
 
-  // 2. Calcular XP y ganancias de la actividad
+  // 2. Calcular XP y ganancias de la actividad (ya aplica multiplicador de categoría)
   const xpResult = calculateActivityXP(
     input.durationMinutes,
     input.intensity,
     input.category
   );
+
+  // 2b. Aplicar multiplicadores de items equipados
+  const equippedItems = hunter.ownedItems;
+  let itemXPMultiplier = 1.0;
+  for (const item of equippedItems) {
+    itemXPMultiplier += item.xpMultiplierAll;
+    if (input.category === "STRENGTH")     itemXPMultiplier += item.xpMultiplierStr;
+    if (input.category === "AGILITY")      itemXPMultiplier += item.xpMultiplierAgi;
+    if (input.category === "INTELLIGENCE") itemXPMultiplier += item.xpMultiplierInt;
+  }
+  const finalXP = Math.round(xpResult.xpGranted * itemXPMultiplier);
+
+  // 2c. Calcular oro ganado — actividades individuales dan poco (fomentamos dungeons)
+  const goldGranted = Math.max(1, Math.floor(finalXP * 0.05));
 
   // 3. Guardar la actividad en DB
   const activity = await prisma.activity.create({
@@ -87,10 +107,11 @@ export async function applyActivity(
       category:        input.category,
       durationMinutes: input.durationMinutes,
       intensity:       input.intensity,
-      xpGranted:       xpResult.xpGranted,
+      xpGranted:       finalXP,
       strengthGain:    xpResult.strengthGain,
       agilityGain:     xpResult.agilityGain,
       intelligenceGain: xpResult.intelligenceGain,
+      goldGranted,
     },
   });
 
@@ -126,7 +147,7 @@ export async function applyActivity(
   const bonusXP = triggered.reduce((sum, a) => sum + a.xpBonus, 0);
 
   // 6. Actualizar stats del cazador
-  const totalXPGained = xpResult.xpGranted + bonusXP;
+  const totalXPGained = finalXP + bonusXP;
   const newXpTotal    = hunter.xpTotal + totalXPGained;
   const newLevel      = getLevelForXP(newXpTotal);
   const newRank       = getRankForLevel(newLevel);
@@ -158,18 +179,20 @@ export async function applyActivity(
       agility:      newAgility,
       intelligence: newIntelligence,
       hunterClass:  newHunterClass,
+      gold:         { increment: goldGranted },
     },
   });
 
   const previousClass = hunter.hunterClass as string;
   return {
     activityId: activity.id,
-    xpGranted:       xpResult.xpGranted,
+    xpGranted:       finalXP,
     strengthGain:    xpResult.strengthGain,
     agilityGain:     xpResult.agilityGain,
     intelligenceGain: xpResult.intelligenceGain,
     acceleratorsTriggered: triggered,
     bonusXP,
+    goldGranted,
     newXpTotal,
     newLevel,
     newRank,

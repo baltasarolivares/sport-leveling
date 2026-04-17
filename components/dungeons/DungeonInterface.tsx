@@ -62,13 +62,27 @@ function DungeonCard({
   userId: string | null;
   onAction: () => void;
 }) {
-  const [loading, setLoading] = useState(false);
-  const [msg,     setMsg]     = useState<string | null>(null);
+  const [loading,    setLoading]    = useState(false);
+  const [msg,        setMsg]        = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const catMeta  = CATEGORY_META[dungeon.category];
   const statMeta = STATUS_META[dungeon.status];
   const isCreator     = userId === dungeon.creator.id;
   const isParticipant = dungeon.participants.some((p) => p.user.id === userId);
   const isFull        = dungeon.participants.length >= dungeon.maxParticipants;
+
+  async function handleCancel() {
+    setLoading(true); setMsg(null);
+    const res  = await fetch(`/api/dungeons/${dungeon.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel" }),
+    });
+    const json = await res.json();
+    setLoading(false);
+    setConfirmCancel(false);
+    if (!res.ok) { setMsg(json.error); return; }
+    onAction();
+  }
 
   async function handleJoin() {
     setLoading(true); setMsg(null);
@@ -168,9 +182,33 @@ function DungeonCard({
               {loading ? "…" : "👑 Completar y Distribuir XP"}
             </button>
           )}
+          {isCreator && !confirmCancel && (
+            <button onClick={() => setConfirmCancel(true)} disabled={loading}
+              className="px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-800/50
+                hover:bg-red-500/10 hover:border-red-500/30 text-zinc-500 hover:text-red-400
+                text-xs transition-colors disabled:opacity-40"
+              title="Cerrar dungeon">
+              ✕
+            </button>
+          )}
           {!isParticipant && isFull && (
             <p className="flex-1 py-2 text-center text-xs text-zinc-500">Dungeon llena</p>
           )}
+        </div>
+      )}
+
+      {/* Confirmación cancelar dungeon */}
+      {confirmCancel && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
+          <p className="text-xs text-red-300 flex-1">¿Cerrar esta dungeon? Los participantes no pierden XP.</p>
+          <button onClick={() => setConfirmCancel(false)}
+            className="text-xs text-zinc-500 hover:text-zinc-300 px-2 py-1 rounded transition-colors">
+            No
+          </button>
+          <button onClick={handleCancel} disabled={loading}
+            className="text-xs font-bold text-red-400 bg-red-500/20 hover:bg-red-500/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
+            {loading ? "…" : "Cerrar"}
+          </button>
         </div>
       )}
 
