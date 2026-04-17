@@ -46,8 +46,12 @@ const STATUS_META = {
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-ES", {
-    weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  // Forzamos la zona America/Santiago para que todos los cazadores vean
+  // la misma hora local, sin importar la configuración del dispositivo.
+  return new Date(iso).toLocaleString("es-CL", {
+    weekday: "short", day: "numeric", month: "short",
+    hour: "2-digit", minute: "2-digit",
+    timeZone: "America/Santiago",
   });
 }
 
@@ -252,9 +256,17 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
     e.preventDefault();
     if (!form.title || !form.scheduledAt) { setError("Título y fecha son requeridos"); return; }
     setLoading(true); setError(null);
+
+    // El valor de <input type="datetime-local"> es una cadena SIN timezone
+    // (p.ej. "2026-04-17T20:00"). Si la enviamos directo, el servidor en Vercel
+    // (TZ=UTC) la interpreta como UTC, provocando desfase de 3-4 h en Santiago.
+    // Construimos el Date en el browser (que sí sabe el timezone local)
+    // y enviamos ISO con "Z" para que el servidor almacene el instante correcto.
+    const scheduledAtISO = new Date(form.scheduledAt).toISOString();
+
     const res  = await fetch("/api/dungeons", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form }),
+      body: JSON.stringify({ ...form, scheduledAt: scheduledAtISO }),
     });
     const json = await res.json();
     setLoading(false);
@@ -279,11 +291,26 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
           className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm
             text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-violet-500 resize-none transition-colors" />
 
-        <input type="datetime-local" value={form.scheduledAt}
-          onChange={(e) => field("scheduledAt", e.target.value)}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm
-            text-zinc-100 focus:outline-none focus:border-violet-500 transition-colors
-            [color-scheme:dark]" />
+        <div className="space-y-1">
+          <input type="datetime-local" value={form.scheduledAt}
+            onChange={(e) => field("scheduledAt", e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm
+              text-zinc-100 focus:outline-none focus:border-violet-500 transition-colors
+              [color-scheme:dark]" />
+          {form.scheduledAt && (
+            <p className="text-[10px] text-zinc-500 px-1">
+              🕐 Se guardará como:{" "}
+              <span className="text-violet-400 font-semibold">
+                {new Date(form.scheduledAt).toLocaleString("es-CL", {
+                  weekday: "short", day: "numeric", month: "short",
+                  hour: "2-digit", minute: "2-digit",
+                  timeZone: "America/Santiago",
+                })}
+              </span>{" "}
+              (Santiago)
+            </p>
+          )}
+        </div>
 
         {/* Categoría */}
         <div className="flex gap-2 flex-wrap">
